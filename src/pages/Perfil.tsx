@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { User, Mail, Calendar, Shield, Edit, Save, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { User, Mail, Calendar, Shield, Edit, Save, X, LogOut } from 'lucide-react'
 import type { Perfil as PerfilType } from '../types/database'
 
 export const Perfil: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, signOut } = useAuth()
+  const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [logoutLoading, setLogoutLoading] = useState(false)
   const [formData, setFormData] = useState({
     nombre: '',
     telefono: '',
@@ -55,6 +58,20 @@ export const Perfil: React.FC = () => {
     setEditing(false)
   }
 
+  const handleLogout = async () => {
+    if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+      setLogoutLoading(true)
+      try {
+        await signOut()
+        navigate('/login')
+      } catch (error) {
+        console.error('Error al cerrar sesión:', error)
+      } finally {
+        setLogoutLoading(false)
+      }
+    }
+  }
+
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -75,11 +92,22 @@ export const Perfil: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
-        <p className="text-gray-600 mt-2">
-          Gestiona tu información personal y configuración de cuenta
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
+          <p className="text-gray-600 mt-2">
+            Gestiona tu información personal y configuración de cuenta
+          </p>
+        </div>
+        
+        <button
+          onClick={handleLogout}
+          disabled={logoutLoading}
+          className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>{logoutLoading ? 'Cerrando...' : 'Cerrar Sesión'}</span>
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border">

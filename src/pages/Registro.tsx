@@ -29,15 +29,21 @@ export const Registro: React.FC = () => {
     setLoading(true)
     setError('')
 
-    // Validaciones
+    // Validaciones del lado del cliente
     if (formData.password !== formData.confirmPassword) {
       setError('Las contraseñas no coinciden')
       setLoading(false)
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (formData.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.nombre.trim()) {
+      setError('El nombre es requerido')
       setLoading(false)
       return
     }
@@ -46,18 +52,24 @@ export const Registro: React.FC = () => {
       const { error } = await signUp(formData.email, formData.password, formData.nombre)
       
       if (error) {
-        if (error.message.includes('already registered')) {
+        // Manejar errores específicos de la API
+        if (error.includes('email') || error.includes('correo') || error.includes('already')) {
           setError('Este correo ya está registrado. Intenta con otro.')
+        } else if (error.includes('validation') || error.includes('required')) {
+          setError('Por favor verifica que todos los campos estén correctos.')
+        } else if (error.includes('conexión') || error.includes('network') || error.includes('fetch')) {
+          setError('Error de conexión. Verifica que el servidor esté funcionando.')
         } else {
-          setError('Error al crear la cuenta. Intenta nuevamente.')
+          setError(error)
         }
       } else {
         setSuccess(true)
         setTimeout(() => {
-          navigate('/login')
+          navigate('/')
         }, 2000)
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error en registro:', error)
       setError('Error al crear la cuenta. Intenta nuevamente.')
     } finally {
       setLoading(false)
@@ -78,14 +90,11 @@ export const Registro: React.FC = () => {
               ¡Cuenta creada exitosamente!
             </h2>
             <p className="text-gray-600 mb-6">
-              Ya puedes iniciar sesión con tus credenciales.
+              Tu cuenta ha sido creada y ya has iniciado sesión automáticamente.
             </p>
-            <Link
-              to="/login"
-              className="inline-block px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Ir al Login
-            </Link>
+            <p className="text-sm text-gray-500">
+              Serás redirigido al inicio en unos segundos...
+            </p>
           </div>
         </div>
       </div>
@@ -182,6 +191,7 @@ export const Registro: React.FC = () => {
                   placeholder="••••••••"
                 />
               </div>
+              <p className="text-xs text-gray-500 mt-1">Mínimo 8 caracteres</p>
             </div>
 
             <div>

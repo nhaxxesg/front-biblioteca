@@ -24,11 +24,18 @@ export const Login: React.FC = () => {
       const { error } = await signIn(email, password)
       
       if (error) {
-        setError('Credenciales inválidas. Verifica tu email y contraseña.')
+        if (error.includes('401') || error.includes('Unauthorized') || error.includes('credentials')) {
+          setError('Credenciales inválidas. Verifica tu email y contraseña.')
+        } else if (error.includes('conexión') || error.includes('network') || error.includes('fetch')) {
+          setError('Error de conexión. Verifica que el servidor esté funcionando.')
+        } else {
+          setError(error)
+        }
       } else {
         navigate(from, { replace: true })
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error en login:', error)
       setError('Error al iniciar sesión. Intenta nuevamente.')
     } finally {
       setLoading(false)
