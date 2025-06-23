@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { BookCard } from '../components/BookCard'
-import { mockLibros, getCategories } from '../data/mockData'
+import { booksApi } from '../lib/api'
 import type { Libro } from '../types/database'
 
 const ITEMS_PER_PAGE = 12
@@ -10,6 +10,7 @@ export const Catalogo: React.FC = () => {
   const [libros, setLibros] = useState<Libro[]>([])
   const [filteredLibros, setFilteredLibros] = useState<Libro[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -17,7 +18,6 @@ export const Catalogo: React.FC = () => {
 
   useEffect(() => {
     fetchLibros()
-    setCategories(getCategories())
   }, [])
 
   useEffect(() => {
@@ -25,10 +25,23 @@ export const Catalogo: React.FC = () => {
   }, [libros, searchTerm, selectedCategory])
 
   const fetchLibros = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setLibros(mockLibros)
-    setLoading(false)
+    try {
+      setLoading(true)
+      setError('')
+      
+      const [booksData, categoriesData] = await Promise.all([
+        booksApi.getBooks(),
+        booksApi.getCategories()
+      ])
+      
+      setLibros(booksData)
+      setCategories(categoriesData)
+    } catch (error: any) {
+      console.error('Error fetching books:', error)
+      setError(error.message || 'Error al cargar los libros')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const filterLibros = () => {
@@ -60,6 +73,10 @@ export const Catalogo: React.FC = () => {
     setSelectedCategory(category)
   }
 
+  const handleRetry = () => {
+    fetchLibros()
+  }
+
   // Pagination logic
   const totalCount = filteredLibros.length
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE)
@@ -67,9 +84,31 @@ export const Catalogo: React.FC = () => {
   const endIndex = startIndex + ITEMS_PER_PAGE
   const currentLibros = filteredLibros.slice(startIndex, endIndex)
 
-  const handleRequestBook = (libroId: string) => {
+  const handleRequestBook = (libroId: number) => {
     // In a real app, this would update the book's availability
     console.log('Book requested:', libroId)
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-12">
+          <div className="text-red-400 mb-4">
+            <Search className="h-16 w-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Error al cargar los libros
+          </h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -78,7 +117,7 @@ export const Catalogo: React.FC = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Catálogo de Libros</h1>
         <p className="text-gray-600">
-          Explora nuestra colección de {totalCount} libros disponibles
+          {loading ? 'Cargando libros...' : `Explora nuestra colección de ${totalCount} libros disponibles`}
         </p>
       </div>
 
@@ -106,6 +145,7 @@ export const Catalogo: React.FC = () => {
               value={selectedCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              disabled={loading}
             >
               <option value="">Todas las categorías</option>
               {categories.map((category) => (

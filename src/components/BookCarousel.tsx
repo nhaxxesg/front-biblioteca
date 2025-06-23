@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BookCard } from './BookCard'
-import { mockLibros } from '../data/mockData'
+import { booksApi } from '../lib/api'
 import type { Libro } from '../types/database'
 
 export const BookCarousel: React.FC = () => {
   const [libros, setLibros] = useState<Libro[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetchPopularBooks()
   }, [])
 
   const fetchPopularBooks = async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Get first 8 books with available quantity > 0
-    const availableBooks = mockLibros
-      .filter(libro => libro.cantidad_disponible > 0)
-      .slice(0, 8)
-    
-    setLibros(availableBooks)
-    setLoading(false)
+    try {
+      setLoading(true)
+      setError('')
+      
+      const booksData = await booksApi.getBooks()
+      
+      // Get first 8 available books
+      const availableBooks = booksData
+        .filter(libro => libro.estado === 'disponible')
+        .slice(0, 8)
+      
+      setLibros(availableBooks)
+    } catch (error: any) {
+      console.error('Error fetching popular books:', error)
+      setError(error.message || 'Error al cargar los libros populares')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const nextSlide = () => {
@@ -45,6 +54,20 @@ export const BookCarousel: React.FC = () => {
             <div key={index} className="bg-gray-200 rounded-lg h-96"></div>
           ))}
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button
+          onClick={fetchPopularBooks}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
+          Reintentar
+        </button>
       </div>
     )
   }

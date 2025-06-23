@@ -1,16 +1,18 @@
 export interface Libro {
-  id: string
+  id: number
   titulo: string
   autor: string
-  año: number
-  cantidad_disponible: number
-  descripcion?: string
-  portada_url?: string
-  categoria?: string
-  isbn?: string
-  editorial?: string
+  anio_publicacion: number
+  categoria: string
+  estado: 'disponible' | 'prestado' | 'mantenimiento'
   created_at: string
   updated_at: string
+  // Campos opcionales para compatibilidad con el frontend existente
+  descripcion?: string
+  portada_url?: string
+  isbn?: string
+  editorial?: string
+  cantidad_disponible?: number
 }
 
 export interface Solicitud {

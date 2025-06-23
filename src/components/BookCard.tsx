@@ -6,7 +6,7 @@ import { useState } from 'react'
 
 interface BookCardProps {
   libro: Libro
-  onRequestBook?: (libroId: string) => void
+  onRequestBook?: (libroId: number) => void
   showRequestButton?: boolean
 }
 
@@ -18,6 +18,10 @@ export const BookCard: React.FC<BookCardProps> = ({
   const { user } = useAuth()
   const [requesting, setRequesting] = useState(false)
   const [requested, setRequested] = useState(false)
+
+  // Determinar disponibilidad basado en el estado del libro
+  const isAvailable = libro.estado === 'disponible'
+  const cantidadDisponible = libro.cantidad_disponible ?? (isAvailable ? 1 : 0)
 
   const handleRequest = async () => {
     if (!user || requesting) return
@@ -51,11 +55,15 @@ export const BookCard: React.FC<BookCardProps> = ({
         
         {/* Badge de disponibilidad */}
         <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${
-          libro.cantidad_disponible > 0 
+          isAvailable
             ? 'bg-secondary-100 text-secondary-800' 
+            : libro.estado === 'prestado'
+            ? 'bg-yellow-100 text-yellow-800'
             : 'bg-red-100 text-red-800'
         }`}>
-          {libro.cantidad_disponible > 0 ? 'Disponible' : 'No disponible'}
+          {isAvailable ? 'Disponible' : 
+           libro.estado === 'prestado' ? 'Prestado' : 
+           libro.estado === 'mantenimiento' ? 'Mantenimiento' : 'No disponible'}
         </div>
       </div>
 
@@ -73,7 +81,7 @@ export const BookCard: React.FC<BookCardProps> = ({
           
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 text-gray-400" />
-            <span>{libro.año}</span>
+            <span>{libro.anio_publicacion}</span>
           </div>
 
           {libro.categoria && (
@@ -103,9 +111,9 @@ export const BookCard: React.FC<BookCardProps> = ({
             ) : (
               <button
                 onClick={handleRequest}
-                disabled={requesting || libro.cantidad_disponible === 0}
+                disabled={requesting || !isAvailable}
                 className={`w-full px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  libro.cantidad_disponible === 0
+                  !isAvailable
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : requesting
                     ? 'bg-primary-200 text-primary-700 cursor-wait'
@@ -121,7 +129,7 @@ export const BookCard: React.FC<BookCardProps> = ({
         {/* Info adicional */}
         <div className="mt-3 pt-3 border-t border-gray-100">
           <div className="flex justify-between items-center text-xs text-gray-500">
-            <span>Disponibles: {libro.cantidad_disponible}</span>
+            <span>Estado: {libro.estado}</span>
             {libro.isbn && <span>ISBN: {libro.isbn}</span>}
           </div>
         </div>
