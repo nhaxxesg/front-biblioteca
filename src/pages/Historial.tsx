@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { mockPrestamos, getLibroById } from '../data/mockData'
+import { prestamosApi, booksApi } from '../lib/api'
 import { 
   Book,
   Calendar,
@@ -10,9 +10,9 @@ import {
   Search,
   Filter
 } from 'lucide-react'
-import type { Prestamo } from '../types/database'
+import type { PrestamoAPI } from '../types/database'
 
-interface PrestamoConLibro extends Prestamo {
+interface PrestamoConLibro extends PrestamoAPI {
   libros: {
     titulo: string
     autor: string
@@ -24,7 +24,7 @@ export const Historial: React.FC = () => {
   const { user } = useAuth()
   const [prestamos, setPrestamos] = useState<PrestamoConLibro[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'activo' | 'devuelto' | 'vencido'>('all')
+  const [filter, setFilter] = useState<'all' | 'activo' | 'devuelto' | 'vencido' | 'pendiente'>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -36,48 +36,45 @@ export const Historial: React.FC = () => {
   const fetchPrestamos = async () => {
     if (!user) return
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
+    try {
+      setLoading(true)
+      
+      // Obtener préstamos y libros en paralelo
+      const [prestamosData, librosData] = await Promise.all([
+        prestamosApi.getPrestamos(),
+        booksApi.getBooks()
+      ])
 
-    // Transform mock data to include book information
-    const prestamosConLibros = mockPrestamos.map(prestamo => {
-      const libro = getLibroById(prestamo.libro_id)
-      return {
-        ...prestamo,
-        libros: {
-          titulo: libro?.titulo || 'Libro no encontrado',
-          autor: libro?.autor || 'Autor desconocido',
-          portada_url: libro?.portada_url
-        }
-      }
-    })
-
-    setPrestamos(prestamosConLibros)
-    setLoading(false)
-  }
-
-  const handleDevolucion = async (prestamoId: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Update local state
-    setPrestamos(prev => prev.map(prestamo => 
-      prestamo.id === prestamoId 
-        ? { 
-            ...prestamo, 
-            fecha_devolucion_real: new Date().toISOString(),
-            estado: 'devuelto' as const
+      // Transformar data para incluir información del libro
+      const prestamosConLibros = prestamosData.map(prestamo => {
+        const libro = librosData.find(l => l.id === prestamo.id_libro)
+        return {
+          ...prestamo,
+          libros: {
+            titulo: libro?.titulo || 'Libro no encontrado',
+            autor: libro?.autor || 'Autor desconocido',
+            portada_url: libro?.portada_url
           }
-        : prestamo
-    ))
+        }
+      })
 
-    alert('Libro marcado como devuelto exitosamente')
+      setPrestamos(prestamosConLibros)
+    } catch (error) {
+      console.error('Error al obtener préstamos:', error)
+      setPrestamos([])
+    } finally {
+      setLoading(false)
+    }
   }
+
+
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case 'activo':
         return 'bg-blue-100 text-blue-800'
+      case 'pendiente':
+        return 'bg-yellow-100 text-yellow-800'
       case 'devuelto':
         return 'bg-secondary-100 text-secondary-800'
       case 'vencido':
@@ -90,6 +87,8 @@ export const Historial: React.FC = () => {
   const getEstadoIcon = (estado: string) => {
     switch (estado) {
       case 'activo':
+        return <Clock className="h-4 w-4" />
+      case 'pendiente':
         return <Clock className="h-4 w-4" />
       case 'devuelto':
         return <CheckCircle className="h-4 w-4" />
@@ -167,6 +166,7 @@ export const Historial: React.FC = () => {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">Todos los estados</option>
+              <option value="pendiente">Pendientes</option>
               <option value="activo">Activos</option>
               <option value="devuelto">Devueltos</option>
               <option value="vencido">Vencidos</option>
@@ -200,7 +200,7 @@ export const Historial: React.FC = () => {
           </div>
         ) : (
           filteredPrestamos.map((prestamo) => {
-            const vencido = isVencido(prestamo.fecha_devolucion_programada, prestamo.estado)
+            const vencido = isVencido(prestamo.f_devolucion_establecida, prestamo.estado)
             const estado = vencido && prestamo.estado === 'activo' ? 'vencido' : prestamo.estado
 
             return (
@@ -234,22 +234,22 @@ export const Historial: React.FC = () => {
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              Prestado: {new Date(prestamo.fecha_prestamo).toLocaleDateString()}
+                              Prestado: {new Date(prestamo.loan_date).toLocaleDateString()}
                             </span>
                           </div>
                           
                           <div className="flex items-center space-x-2">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              Devolver: {new Date(prestamo.fecha_devolucion_programada).toLocaleDateString()}
+                              Devolver: {new Date(prestamo.f_devolucion_establecida).toLocaleDateString()}
                             </span>
                           </div>
 
-                          {prestamo.fecha_devolucion_real && (
+                          {prestamo.f_devolucion_real && (
                             <div className="flex items-center space-x-2">
                               <CheckCircle className="h-4 w-4 text-secondary-600" />
                               <span>
-                                Devuelto: {new Date(prestamo.fecha_devolucion_real).toLocaleDateString()}
+                                Devuelto: {new Date(prestamo.f_devolucion_real).toLocaleDateString()}
                               </span>
                             </div>
                           )}
@@ -262,14 +262,7 @@ export const Historial: React.FC = () => {
                           <span className="ml-1 capitalize">{estado}</span>
                         </div>
 
-                        {prestamo.estado === 'activo' && (
-                          <button
-                            onClick={() => handleDevolucion(prestamo.id)}
-                            className="px-4 py-2 bg-secondary-600 text-white text-sm font-medium rounded-md hover:bg-secondary-700 transition-colors"
-                          >
-                            Marcar como Devuelto
-                          </button>
-                        )}
+
                       </div>
                     </div>
                   </div>

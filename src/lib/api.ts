@@ -151,4 +151,14 @@ export const booksApi = {
   }
 }
 
+// Funciones para préstamos
+export const prestamosApi = {
+  // Obtener préstamos del usuario
+  getPrestamos: async (): Promise<any[]> => {
+    return apiRequest('/prestamos', {
+      method: 'GET'
+    }, 'http://127.0.0.1:8003/api')
+  }
+}
+
 export default apiRequest 

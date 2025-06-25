@@ -49,6 +49,19 @@ export interface Prestamo {
   updated_at: string
 }
 
+// Interfaz para la respuesta de la API de préstamos
+export interface PrestamoAPI {
+  id: number
+  id_user: number
+  id_libro: number
+  loan_date: string
+  f_devolucion_establecida: string
+  f_devolucion_real?: string
+  estado: 'pendiente' | 'activo' | 'devuelto' | 'vencido'
+  created_at: string
+  updated_at: string
+}
+
 export interface Perfil {
   id: string
   nombre: string
