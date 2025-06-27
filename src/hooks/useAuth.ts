@@ -76,7 +76,7 @@ export const useAuthState = () => {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-      const response = await authApi.login({ email, password })
+      const response = await authApi.login({ email, password, application: 'web' })
       
       // Obtener datos del usuario después del login
       const userData = await authApi.me()

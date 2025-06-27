@@ -1,5 +1,5 @@
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
-const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'http://127.0.0.1:8001/api'
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api'
+const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'http://127.0.0.1:8000/api'
 
 // Tipos para las respuestas de la API
 interface AuthResponse {
@@ -94,6 +94,7 @@ export const authApi = {
   login: async (data: {
     email: string
     password: string
+    application: string
   }): Promise<AuthResponse> => {
     const response = await apiRequest<AuthResponse>('/auth/login', {
       method: 'POST',
