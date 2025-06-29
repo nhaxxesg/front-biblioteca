@@ -40,34 +40,36 @@ export const Historial: React.FC = () => {
       setLoading(true)
       
       // Obtener préstamos y libros en paralelo
+      // No necesitamos pasar userId porque getPrestamos lo obtiene del token automáticamente
       const [prestamosData, librosData] = await Promise.all([
         prestamosApi.getPrestamos(),
         booksApi.getBooks()
       ])
 
       // Transformar data para incluir información del libro
-      const prestamosConLibros = prestamosData.map(prestamo => {
-        const libro = librosData.find(l => l.id === prestamo.id_libro)
+      const prestamosConLibros: PrestamoConLibro[] = prestamosData.map(prestamo => {
+        const libro = librosData.find(l => Number(l.id) === Number(prestamo.id_libro))
+        
         return {
           ...prestamo,
+          estado: prestamo.estado as 'pendiente' | 'activo' | 'devuelto' | 'vencido',
           libros: {
             titulo: libro?.titulo || 'Libro no encontrado',
-            autor: libro?.autor || 'Autor desconocido',
-            portada_url: libro?.portada_url
+            autor: libro?.autor || `Autor ID: ${libro?.id_autor}` || 'Autor desconocido',
+            portada_url: libro?.imagen || libro?.portada_url
           }
         }
       })
 
+      console.log('📋 Préstamos procesados:', prestamosConLibros.length)
       setPrestamos(prestamosConLibros)
     } catch (error) {
-      console.error('Error al obtener préstamos:', error)
+      console.error('❌ Error al obtener préstamos:', error)
       setPrestamos([])
     } finally {
       setLoading(false)
     }
   }
-
-
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -261,8 +263,6 @@ export const Historial: React.FC = () => {
                           {getEstadoIcon(estado)}
                           <span className="ml-1 capitalize">{estado}</span>
                         </div>
-
-
                       </div>
                     </div>
                   </div>

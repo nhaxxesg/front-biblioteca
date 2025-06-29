@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, ChevronLeft, ChevronRight, BookOpen, ChevronDown, X, RefreshCw, TestTube } from 'lucide-react'
 import { BookCard } from '../components/BookCard'
 import { booksApi } from '../lib/api'
+import { useSolicitudes } from '../hooks/useSolicitudes'
 import type { Libro } from '../types/database'
 
 const ITEMS_PER_PAGE = 12

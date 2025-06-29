@@ -1,29 +1,46 @@
 export interface Libro {
   id: number
+  id_autor: number
   titulo: string
-  autor: string
   anio_publicacion: number
-  categoria: string
+  ejemplares: number
   estado: 'disponible' | 'prestado' | 'mantenimiento'
+  imagen: string
   created_at: string
   updated_at: string
   // Campos opcionales para compatibilidad con el frontend existente
+  autor?: string
   descripcion?: string
-  portada_url?: string
+  categoria?: string
   isbn?: string
   editorial?: string
   cantidad_disponible?: number
+  portada_url?: string
 }
 
 export interface Solicitud {
-  id: string
-  usuario_id: string
-  libro_id: string
-  descripcion?: string
+  id: number
+  id_usuario: number
+  id_libro: number
   estado: 'pendiente' | 'aprobada' | 'rechazada'
-  fecha_realizada: string
   created_at: string
   updated_at: string
+}
+
+// Tipo para crear una nueva solicitud
+export interface SolicitudCreate {
+  id_usuario: number
+  id_libro: number
+  estado: 'pendiente'
+}
+
+// Tipo para la solicitud con información del libro incluida
+export interface SolicitudConLibro extends Solicitud {
+  libro: {
+    titulo: string
+    autor: string
+    portada_url?: string
+  }
 }
 
 export interface Sancion {
@@ -52,11 +69,12 @@ export interface Prestamo {
 // Interfaz para la respuesta de la API de préstamos
 export interface PrestamoAPI {
   id: number
-  id_user: number
+  id_admin: number
+  id_lector: number
   id_libro: number
   loan_date: string
   f_devolucion_establecida: string
-  f_devolucion_real?: string
+  f_devolucion_real: string | null
   estado: 'pendiente' | 'activo' | 'devuelto' | 'vencido'
   created_at: string
   updated_at: string

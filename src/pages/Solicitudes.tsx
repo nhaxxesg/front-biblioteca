@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { mockSolicitudes, mockSanciones, getLibroById } from '../data/mockData'
+import { useSolicitudes } from '../hooks/useSolicitudes'
+import { mockSanciones } from '../data/mockData'
 import { 
   Clock, 
   CheckCircle, 
@@ -8,61 +9,45 @@ import {
   AlertTriangle,
   Book,
   Calendar,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react'
-import type { Solicitud, Sancion } from '../types/database'
-
-interface SolicitudConLibro extends Solicitud {
-  libros: {
-    titulo: string
-    autor: string
-    portada_url?: string
-  }
-}
+import type { Sancion } from '../types/database'
 
 export const Solicitudes: React.FC = () => {
   const { user } = useAuth()
-  const [solicitudes, setSolicitudes] = useState<SolicitudConLibro[]>([])
+  const { solicitudes, loading: solicitudesLoading, error: solicitudesError, refetch } = useSolicitudes()
   const [sanciones, setSanciones] = useState<Sancion[]>([])
-  const [loading, setLoading] = useState(true)
+  const [sancionesLoading, setSancionesLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'solicitudes' | 'sanciones'>('solicitudes')
+
+  // El loading general depende de ambos estados
+  const loading = solicitudesLoading || sancionesLoading
 
   useEffect(() => {
     if (user) {
-      fetchSolicitudes()
       fetchSanciones()
     }
   }, [user])
 
-  const fetchSolicitudes = async () => {
-    if (!user) return
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Transform mock data to include book information
-    const solicitudesConLibros = mockSolicitudes.map(solicitud => {
-      const libro = getLibroById(solicitud.libro_id)
-      return {
-        ...solicitud,
-        libros: {
-          titulo: libro?.titulo || 'Libro no encontrado',
-          autor: libro?.autor || 'Autor desconocido',
-          portada_url: libro?.portada_url
-        }
-      }
-    })
-
-    setSolicitudes(solicitudesConLibros)
-  }
-
   const fetchSanciones = async () => {
     if (!user) return
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 300))
-    setSanciones(mockSanciones)
-    setLoading(false)
+    try {
+      setSancionesLoading(true)
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 300))
+      setSanciones(mockSanciones)
+    } catch (error) {
+      console.error('Error al obtener sanciones:', error)
+    } finally {
+      setSancionesLoading(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    refetch()
+    fetchSanciones()
   }
 
   const getEstadoColor = (estado: string) => {
@@ -122,12 +107,26 @@ export const Solicitudes: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Solicitudes y Sanciones
-        </h1>
-        <p className="text-gray-600">
-          Revisa el estado de tus solicitudes de préstamo y sanciones activas
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Solicitudes y Sanciones
+            </h1>
+            <p className="text-gray-600">
+              Revisa el estado de tus solicitudes de préstamo y sanciones activas
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:bg-primary-300"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Actualizar</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -190,10 +189,10 @@ export const Solicitudes: React.FC = () => {
               <div key={solicitud.id} className="bg-white rounded-lg shadow-sm border p-6">
                 <div className="flex items-start space-x-4">
                   <div className="flex-shrink-0">
-                    {solicitud.libros.portada_url ? (
+                    {solicitud.libro.portada_url ? (
                       <img
-                        src={solicitud.libros.portada_url}
-                        alt={solicitud.libros.titulo}
+                        src={solicitud.libro.portada_url}
+                        alt={solicitud.libro.titulo}
                         className="w-16 h-20 object-cover rounded"
                       />
                     ) : (
@@ -207,22 +206,16 @@ export const Solicitudes: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {solicitud.libros.titulo}
+                          {solicitud.libro.titulo}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          por {solicitud.libros.autor}
+                          por {solicitud.libro.autor}
                         </p>
                         
-                        {solicitud.descripcion && (
-                          <p className="text-sm text-gray-700 mb-3">
-                            {solicitud.descripcion}
-                          </p>
-                        )}
-
                         <div className="flex items-center space-x-2 text-sm text-gray-500">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            Solicitado el {new Date(solicitud.fecha_realizada).toLocaleDateString()}
+                            Solicitado el {new Date(solicitud.created_at).toLocaleDateString()}
                           </span>
                         </div>
                       </div>

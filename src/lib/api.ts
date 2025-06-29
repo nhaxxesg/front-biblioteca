@@ -1,5 +1,7 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api'
 const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'http://127.0.0.1:8000/api'
+const PRESTAMOS_API_URL = (import.meta as any).env?.VITE_PRESTAMOS_API_URL || 'http://127.0.0.1:8005/api'
+const SOLICITUDES_API_URL = (import.meta as any).env?.VITE_SOLICITUDES_API_URL || 'http://127.0.0.1:8003/api'
 
 // Tipos para las respuestas de la API
 interface AuthResponse {
@@ -11,6 +13,20 @@ interface AuthResponse {
 interface ApiError {
   message: string
   errors?: Record<string, string[]>
+}
+
+// Tipo para los préstamos
+interface Prestamo {
+  id: number
+  id_admin: number
+  id_lector: number
+  id_libro: number
+  loan_date: string
+  f_devolucion_establecida: string
+  f_devolucion_real: string | null
+  estado: string
+  created_at: string
+  updated_at: string
 }
 
 // Configuración de headers con token
@@ -139,26 +155,258 @@ export const authApi = {
 export const booksApi = {
   // Obtener todos los libros
   getBooks: async (): Promise<any[]> => {
-    return apiRequest('/book', {
-      method: 'GET'
-    }, BOOKS_API_URL)
+    try {
+      const response = await apiRequest('/book', {
+        method: 'GET'
+      }, BOOKS_API_URL)
+      
+      console.log('Libros obtenidos:', response)
+      return Array.isArray(response) ? response : []
+    } catch (error: any) {
+      console.error('Error al obtener libros:', error)
+      return []
+    }
   },
 
   // Obtener categorías únicas de los libros
   getCategories: async (): Promise<string[]> => {
-    const books = await booksApi.getBooks()
-    const categories = [...new Set(books.map(book => book.categoria))]
-    return categories.filter(Boolean)
+    try {
+      const books = await booksApi.getBooks()
+      // Como la nueva estructura no tiene campo categoria, devolvemos categorías predefinidas
+      // o puedes adaptar esto según tu nueva estructura de datos
+      const categories = [...new Set(books.map(book => book.categoria).filter(Boolean))]
+      
+      // Si no hay categorías en los datos, devolver algunas por defecto
+      if (categories.length === 0) {
+        return ['Ficción', 'Ciencia', 'Historia', 'Tecnología', 'Biografía', 'Autoayuda']
+      }
+      
+      return categories
+    } catch (error: any) {
+      console.error('Error al obtener categorías:', error)
+      return ['Ficción', 'Ciencia', 'Historia', 'Tecnología', 'Biografía', 'Autoayuda']
+    }
   }
 }
 
 // Funciones para préstamos
 export const prestamosApi = {
   // Obtener préstamos del usuario
-  getPrestamos: async (): Promise<any[]> => {
-    return apiRequest('/prestamos', {
-      method: 'GET'
-    }, 'http://127.0.0.1:8003/api')
+  getPrestamos: async (userId?: number): Promise<Prestamo[]> => {
+    try {
+      // Si no se proporciona userId, obtenerlo del token
+      if (!userId) {
+        try {
+          const userInfo = await authApi.me()
+          // El ID puede venir como 'id' o 'sub' en el JWT
+          userId = Number(userInfo.id || userInfo.sub)
+          console.log('📡 Obteniendo préstamos para usuario ID:', userId)
+        } catch (error) {
+          console.error('❌ No se pudo obtener el ID del usuario desde el token:', error)
+          throw new Error('No se pudo obtener el ID del usuario. Inicia sesión nuevamente.')
+        }
+      }
+
+      const response = await apiRequest<Prestamo[]>(`/prestamos/usuario/${userId}`, {
+        method: 'GET'
+      }, PRESTAMOS_API_URL)
+      
+      console.log('✅ Préstamos obtenidos:', response?.length || 0, 'préstamos')
+      return Array.isArray(response) ? response : []
+    } catch (error: any) {
+      console.error('❌ Error al obtener préstamos:', error)
+      return []
+    }
+  },
+
+  // Obtener todos los préstamos (para administradores)
+  getAllPrestamos: async (): Promise<Prestamo[]> => {
+    try {
+      const response = await apiRequest<Prestamo[]>('/prestamos', {
+        method: 'GET'
+      }, PRESTAMOS_API_URL)
+      
+      console.log('Todos los préstamos obtenidos:', response)
+      return Array.isArray(response) ? response : []
+    } catch (error: any) {
+      console.error('Error al obtener todos los préstamos:', error)
+      return []
+    }
+  },
+
+  // Obtener préstamo por ID
+  getPrestamoById: async (prestamoId: number): Promise<Prestamo | null> => {
+    try {
+      const response = await apiRequest<Prestamo>(`/prestamos/${prestamoId}`, {
+        method: 'GET'
+      }, PRESTAMOS_API_URL)
+      
+      console.log('Préstamo obtenido:', response)
+      return response
+    } catch (error: any) {
+      console.error('Error al obtener préstamo:', error)
+      return null
+    }
+  },
+
+  // Filtrar préstamos por estado
+  getPrestamosByEstado: async (userId: number, estado: string): Promise<Prestamo[]> => {
+    try {
+      const prestamos = await prestamosApi.getPrestamos(userId)
+      return prestamos.filter(prestamo => prestamo.estado === estado)
+    } catch (error: any) {
+      console.error('Error al filtrar préstamos por estado:', error)
+      return []
+    }
+  },
+
+  // Obtener préstamos activos (pendientes)
+  getPrestamosActivos: async (userId: number): Promise<Prestamo[]> => {
+    return prestamosApi.getPrestamosByEstado(userId, 'pendiente')
+  },
+
+  // Obtener préstamos vencidos
+  getPrestamosVencidos: async (userId: number): Promise<Prestamo[]> => {
+    try {
+      const prestamos = await prestamosApi.getPrestamos(userId)
+      const hoy = new Date()
+      
+      return prestamos.filter(prestamo => {
+        const fechaDevolucion = new Date(prestamo.f_devolucion_establecida)
+        return prestamo.estado === 'pendiente' && fechaDevolucion < hoy
+      })
+    } catch (error: any) {
+      console.error('Error al obtener préstamos vencidos:', error)
+      return []
+    }
+  }
+}
+
+// Funciones para solicitudes de préstamos
+export const solicitudesApi = {
+  // Crear una nueva solicitud de préstamo
+  createSolicitud: async (data: {
+    id_libro: number,
+    estado?: 'pendiente'
+  }): Promise<any> => {
+    try {
+      // Obtener el ID del usuario del token
+      const userInfo = await authApi.me()
+      const userId = Number(userInfo.id || userInfo.sub)
+
+      // Verificar si ya existe una solicitud pendiente para este libro
+      try {
+        const [solicitudesExistentes, prestamosExistentes] = await Promise.all([
+          apiRequest(`/solicitudes/usuario/${userId}`, {
+            method: 'GET'
+          }, SOLICITUDES_API_URL),
+          apiRequest(`/prestamos/usuario/${userId}`, {
+            method: 'GET'
+          }, PRESTAMOS_API_URL)
+        ])
+        
+        // Verificar préstamos activos
+        const prestamoActivo = Array.isArray(prestamosExistentes) && 
+          prestamosExistentes.find(p => 
+            Number(p.id_libro) === Number(data.id_libro) && 
+            (p.estado === 'pendiente' || p.estado === 'activo')
+          )
+        
+        if (prestamoActivo) {
+          throw new Error('Ya tienes un préstamo activo para este libro')
+        }
+        
+        // Verificar solicitudes pendientes
+        const solicitudExistente = Array.isArray(solicitudesExistentes) && 
+          solicitudesExistentes.find(s => 
+            Number(s.id_libro) === Number(data.id_libro) && 
+            s.estado === 'pendiente'
+          )
+        
+        if (solicitudExistente) {
+          throw new Error('Ya tienes una solicitud pendiente para este libro')
+        }
+      } catch (validationError: any) {
+        // Si el error es de validación, lo lanzamos
+        if (validationError.message.includes('préstamo activo') || 
+            validationError.message.includes('solicitud pendiente')) {
+          throw validationError
+        }
+        // Si es otro error (ej. red), continuamos (no queremos bloquear por errores de red)
+        console.warn('No se pudo validar solicitudes/préstamos existentes:', validationError)
+      }
+
+      const solicitudData = {
+        id_usuario: userId,
+        id_libro: data.id_libro,
+        estado: data.estado || 'pendiente' as 'pendiente'
+      }
+
+      console.log('📡 Creando solicitud para libro ID:', data.id_libro)
+      
+      const response = await apiRequest('/solicitudes', {
+        method: 'POST',
+        body: JSON.stringify(solicitudData)
+      }, SOLICITUDES_API_URL)
+      
+      console.log('✅ Solicitud creada exitosamente')
+      return response
+    } catch (error: any) {
+      console.error('❌ Error al crear solicitud:', error)
+      
+      // Mejorar el mensaje de error
+      if (error.message.includes('préstamo activo') || 
+          error.message.includes('solicitud pendiente')) {
+        throw error // Pasar el mensaje de validación tal como está
+      } else if (error.message.includes('syntax error')) {
+        throw new Error('Error de formato en los datos. Verifica que el servidor esté funcionando correctamente.')
+      }
+      
+      throw error
+    }
+  },
+
+  // Obtener todas las solicitudes del usuario
+  getSolicitudes: async (userId?: number): Promise<any[]> => {
+    try {
+      // Si no se proporciona userId, obtenerlo del token
+      if (!userId) {
+        try {
+          const userInfo = await authApi.me()
+          // El ID puede venir como 'id' o 'sub' en el JWT
+          userId = Number(userInfo.id || userInfo.sub)
+          console.log('📡 Obteniendo solicitudes para usuario ID:', userId)
+        } catch (error) {
+          console.error('❌ No se pudo obtener el ID del usuario desde el token:', error)
+          throw new Error('No se pudo obtener el ID del usuario. Inicia sesión nuevamente.')
+        }
+      }
+
+      const response = await apiRequest(`/solicitudes/usuario/${userId}`, {
+        method: 'GET'
+      }, SOLICITUDES_API_URL)
+      
+      console.log('✅ Solicitudes obtenidas:', Array.isArray(response) ? response.length : 0, 'solicitudes')
+      return Array.isArray(response) ? response : []
+    } catch (error: any) {
+      console.error('❌ Error al obtener solicitudes:', error)
+      return []
+    }
+  },
+
+  // Obtener solicitudes de un usuario específico
+  getSolicitudesByUsuario: async (userId: number): Promise<any[]> => {
+    try {
+      const response = await apiRequest(`/solicitudes/usuario/${userId}`, {
+        method: 'GET'
+      }, SOLICITUDES_API_URL)
+      
+      console.log('Solicitudes del usuario obtenidas:', response)
+      return Array.isArray(response) ? response : []
+    } catch (error: any) {
+      console.error('Error al obtener solicitudes del usuario:', error)
+      return []
+    }
   }
 }
 
