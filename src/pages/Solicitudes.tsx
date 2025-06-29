@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useSolicitudes } from '../hooks/useSolicitudes'
-import { mockSanciones } from '../data/mockData'
 import { 
   Clock, 
   CheckCircle, 
@@ -12,42 +11,20 @@ import {
   FileText,
   RefreshCw
 } from 'lucide-react'
-import type { Sancion } from '../types/database'
 
 export const Solicitudes: React.FC = () => {
   const { user } = useAuth()
-  const { solicitudes, loading: solicitudesLoading, error: solicitudesError, refetch } = useSolicitudes()
-  const [sanciones, setSanciones] = useState<Sancion[]>([])
-  const [sancionesLoading, setSancionesLoading] = useState(true)
+  const { 
+    solicitudes, 
+    sanciones, 
+    loading, 
+    error: solicitudesError, 
+    refetch 
+  } = useSolicitudes()
   const [activeTab, setActiveTab] = useState<'solicitudes' | 'sanciones'>('solicitudes')
-
-  // El loading general depende de ambos estados
-  const loading = solicitudesLoading || sancionesLoading
-
-  useEffect(() => {
-    if (user) {
-      fetchSanciones()
-    }
-  }, [user])
-
-  const fetchSanciones = async () => {
-    if (!user) return
-
-    try {
-      setSancionesLoading(true)
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 300))
-      setSanciones(mockSanciones)
-    } catch (error) {
-      console.error('Error al obtener sanciones:', error)
-    } finally {
-      setSancionesLoading(false)
-    }
-  }
 
   const handleRefresh = () => {
     refetch()
-    fetchSanciones()
   }
 
   const getEstadoColor = (estado: string) => {

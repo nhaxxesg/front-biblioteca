@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { solicitudesApi, booksApi, prestamosApi } from '../lib/api'
+import { solicitudesApi, booksApi, prestamosApi, sancionesApi } from '../lib/api'
 import { useAuth } from './useAuth'
-import type { Solicitud, PrestamoAPI } from '../types/database'
+import type { Solicitud, PrestamoAPI, Sancion } from '../types/database'
 
 interface SolicitudConLibro extends Solicitud {
   libro: {
@@ -15,6 +15,7 @@ export const useSolicitudes = () => {
   const { user } = useAuth()
   const [solicitudes, setSolicitudes] = useState<SolicitudConLibro[]>([])
   const [prestamosActivos, setPrestamosActivos] = useState<PrestamoAPI[]>([])
+  const [sanciones, setSanciones] = useState<Sancion[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,14 +26,16 @@ export const useSolicitudes = () => {
       setLoading(true)
       setError(null)
       
-      // Obtener solicitudes y préstamos en paralelo
-      const [solicitudesData, prestamosData] = await Promise.all([
+      // Obtener solicitudes, préstamos y sanciones en paralelo
+      const [solicitudesData, prestamosData, sancionesData] = await Promise.all([
         solicitudesApi.getSolicitudes(),
-        prestamosApi.getPrestamos()
+        prestamosApi.getPrestamos(),
+        sancionesApi.getSanciones()
       ])
       
       console.log('📋 Solicitudes obtenidas:', solicitudesData.length)
       console.log('📋 Préstamos obtenidos:', prestamosData.length)
+      console.log('📋 Sanciones obtenidas:', sancionesData.length)
       
       // Procesar solicitudes con información de libros
       const librosPromises = solicitudesData.map(async (solicitud: Solicitud) => {
@@ -72,12 +75,14 @@ export const useSolicitudes = () => {
       
       setSolicitudes(solicitudesConLibros)
       setPrestamosActivos(prestamosActivosFiltered)
+      setSanciones(sancionesData)
       
     } catch (error: any) {
-      console.error('❌ Error al obtener solicitudes y préstamos:', error)
+      console.error('❌ Error al obtener solicitudes, préstamos y sanciones:', error)
       setError(error.message || 'Error al cargar los datos')
       setSolicitudes([])
       setPrestamosActivos([])
+      setSanciones([])
     } finally {
       setLoading(false)
     }
@@ -115,8 +120,27 @@ export const useSolicitudes = () => {
     ) || null
   }
 
-  // Verificar si un libro está bloqueado para solicitudes (ya tiene solicitud pendiente O préstamo activo)
+  // Verificar si el usuario tiene sanciones activas
+  const hasSancionesActivas = (): boolean => {
+    return sanciones.some(sancion => sancion.estado === 'activa')
+  }
+
+  // Obtener sanciones activas
+  const getSancionesActivas = (): Sancion[] => {
+    return sanciones.filter(sancion => sancion.estado === 'activa')
+  }
+
+  // Verificar si un libro está bloqueado para solicitudes (ya tiene solicitud pendiente O préstamo activo O usuario tiene sanciones activas)
   const isBookBlockedForRequest = (id_libro: number): { blocked: boolean, reason: string, details?: any } => {
+    // Verificar sanciones activas primero
+    if (hasSancionesActivas()) {
+      return {
+        blocked: true,
+        reason: 'sanciones_activas',
+        details: getSancionesActivas()
+      }
+    }
+
     const prestamo = getPrestamoActivoForBook(id_libro)
     if (prestamo) {
       return {
@@ -146,7 +170,9 @@ export const useSolicitudes = () => {
       const { blocked, reason, details } = isBookBlockedForRequest(id_libro)
       
       if (blocked) {
-        if (reason === 'prestamo_activo') {
+        if (reason === 'sanciones_activas') {
+          throw new Error('No puedes solicitar libros mientras tengas sanciones activas')
+        } else if (reason === 'prestamo_activo') {
           throw new Error('Ya tienes un préstamo activo para este libro')
         } else if (reason === 'solicitud_pendiente') {
           throw new Error('Ya tienes una solicitud pendiente para este libro')
@@ -192,6 +218,9 @@ export const useSolicitudes = () => {
     getSolicitudForBook,
     hasPrestamoActivoForBook,
     getPrestamoActivoForBook,
-    isBookBlockedForRequest
+    isBookBlockedForRequest,
+    sanciones,
+    hasSancionesActivas,
+    getSancionesActivas
   }
 } 

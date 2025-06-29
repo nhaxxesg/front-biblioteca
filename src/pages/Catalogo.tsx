@@ -50,10 +50,14 @@ export const Catalogo: React.FC = () => {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(libro =>
-        libro.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        libro.autor.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      filtered = filtered.filter(libro => {
+        const titulo = libro.titulo || ''
+        const autor = libro.autor || ''
+        const searchLower = searchTerm.toLowerCase()
+        
+        return titulo.toLowerCase().includes(searchLower) ||
+               autor.toLowerCase().includes(searchLower)
+      })
     }
 
     // Apply category filter

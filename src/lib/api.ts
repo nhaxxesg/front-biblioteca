@@ -410,4 +410,45 @@ export const solicitudesApi = {
   }
 }
 
+// Funciones para sanciones
+export const sancionesApi = {
+  // Obtener sanciones del usuario
+  getSanciones: async (userId?: number): Promise<import('../types/database').Sancion[]> => {
+    try {
+      // Si no se proporciona userId, obtenerlo del token
+      if (!userId) {
+        try {
+          const userInfo = await authApi.me()
+          userId = Number(userInfo.id || userInfo.sub)
+          console.log('📡 Obteniendo sanciones para usuario ID:', userId)
+        } catch (error) {
+          console.error('❌ No se pudo obtener el ID del usuario desde el token:', error)
+          throw new Error('No se pudo obtener el ID del usuario. Inicia sesión nuevamente.')
+        }
+      }
+
+      const response = await apiRequest<import('../types/database').SancionesResponse>(`/sanciones/usuario/${userId}`, {
+        method: 'GET'
+      }, 'http://127.0.0.1:8006/api')
+      
+      console.log('✅ Sanciones obtenidas:', response?.data?.length || 0, 'sanciones')
+      return Array.isArray(response?.data) ? response.data : []
+    } catch (error: any) {
+      console.error('❌ Error al obtener sanciones:', error)
+      return []
+    }
+  },
+
+  // Verificar si el usuario tiene sanciones activas
+  hasSancionesActivas: async (userId?: number): Promise<boolean> => {
+    try {
+      const sanciones = await sancionesApi.getSanciones(userId)
+      return sanciones.some(sancion => sancion.estado === 'activa')
+    } catch (error: any) {
+      console.error('❌ Error al verificar sanciones activas:', error)
+      return false
+    }
+  }
+}
+
 export default apiRequest 

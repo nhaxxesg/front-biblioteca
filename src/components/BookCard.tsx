@@ -38,11 +38,17 @@ export const BookCard: React.FC<BookCardProps> = ({
   const alreadyRequested = blocked
   const existingSolicitud = reason === 'solicitud_pendiente' ? details : null
   const prestamoActivo = reason === 'prestamo_activo' ? details : null
+  const sancionesActivas = reason === 'sanciones_activas' ? details : null
 
   const handleRequestClick = () => {
     // Verificación adicional antes de mostrar el modal
     if (blocked) {
-      if (reason === 'prestamo_activo') {
+      if (reason === 'sanciones_activas') {
+        showError(
+          'Usuario sancionado',
+          'No puedes solicitar libros mientras tengas sanciones activas'
+        )
+      } else if (reason === 'prestamo_activo') {
         showError(
           'Préstamo activo',
           'Ya tienes un préstamo activo para este libro'
@@ -82,7 +88,12 @@ export const BookCard: React.FC<BookCardProps> = ({
       // Cerrar modal y mostrar error específico según el tipo
       setShowModal(false)
       
-      if (error.message.includes('préstamo activo')) {
+      if (error.message.includes('sanciones activas')) {
+        showError(
+          'Usuario sancionado',
+          'No puedes solicitar libros mientras tengas sanciones activas'
+        )
+      } else if (error.message.includes('préstamo activo')) {
         showError(
           'Préstamo activo',
           'Ya tienes un préstamo activo para este libro'
@@ -193,7 +204,13 @@ export const BookCard: React.FC<BookCardProps> = ({
             <div className="mt-4">
               {alreadyRequested ? (
                 <div className="space-y-2">
-                  {prestamoActivo ? (
+                  {sancionesActivas ? (
+                    // Mostrar información de sanciones activas
+                    <div className="flex items-center justify-center space-x-2 px-4 py-2 bg-red-50 text-red-800 rounded-md border border-red-200">
+                      <X className="h-4 w-4" />
+                      <span className="text-sm font-medium">Usuario Sancionado</span>
+                    </div>
+                  ) : prestamoActivo ? (
                     // Mostrar información de préstamo activo
                     <div className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-50 text-blue-800 rounded-md border border-blue-200">
                       <CheckCircle className="h-4 w-4" />
@@ -208,6 +225,14 @@ export const BookCard: React.FC<BookCardProps> = ({
                   )}
                   
                   {/* Mostrar información específica según el tipo */}
+                  {sancionesActivas && (
+                    <div className="text-xs text-red-600 text-center">
+                      Tienes {sancionesActivas.length} sanción(es) activa(s)
+                      <br />
+                      No puedes solicitar libros hasta resolver las sanciones
+                    </div>
+                  )}
+                  
                   {prestamoActivo && (
                     <div className="text-xs text-gray-500 text-center">
                       Préstamo #{prestamoActivo.id} - Estado: {prestamoActivo.estado}
