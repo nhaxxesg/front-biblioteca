@@ -1,7 +1,7 @@
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api'
 const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'http://127.0.0.1:8000/api'
 const PRESTAMOS_API_URL = (import.meta as any).env?.VITE_PRESTAMOS_API_URL || 'http://127.0.0.1:8005/api'
-const SOLICITUDES_API_URL = (import.meta as any).env?.VITE_SOLICITUDES_API_URL || 'http://127.0.0.1:8003/api'
+const SOLICITUDES_API_URL = (import.meta as any).env?.VITE_SOLICITUDES_API_URL || 'http://127.0.0.1:8006/api'
 
 // Tipos para las respuestas de la API
 interface AuthResponse {
