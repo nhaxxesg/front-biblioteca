@@ -429,7 +429,7 @@ export const sancionesApi = {
 
       const response = await apiRequest<import('../types/database').SancionesResponse>(`/sanciones/usuario/${userId}`, {
         method: 'GET'
-      }, 'http://penalty.proyectoinsti.site/api')
+      }, 'https://penalty.proyectoinsti.site/api')
       
       console.log('✅ Sanciones obtenidas:', response?.data?.length || 0, 'sanciones')
       return Array.isArray(response?.data) ? response.data : []
