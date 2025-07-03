@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "jsx": "react-jsx",
+    "moduleResolution": "node",        // Cambiar de "bundler" a "node" o "nodenext"
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],  // Agrega DOM para reconocer <div>, <a>, etc.
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "sourceMap": false
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

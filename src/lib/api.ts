@@ -1,7 +1,7 @@
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://127.0.0.1:8001/api'
-const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'http://127.0.0.1:8000/api'
-const PRESTAMOS_API_URL = (import.meta as any).env?.VITE_PRESTAMOS_API_URL || 'http://127.0.0.1:8005/api'
-const SOLICITUDES_API_URL = (import.meta as any).env?.VITE_SOLICITUDES_API_URL || 'http://127.0.0.1:8003/api'
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://auth.proyectoinsti.site/api'
+const BOOKS_API_URL = (import.meta as any).env?.VITE_BOOKS_API_URL || 'https://book.proyectoinsti.site/api'
+const PRESTAMOS_API_URL = (import.meta as any).env?.VITE_PRESTAMOS_API_URL || 'https://loan.proyectoinsti.site/api'
+const SOLICITUDES_API_URL = (import.meta as any).env?.VITE_SOLICITUDES_API_URL || 'https://request.proyectoinsti.site/api'
 
 // Tipos para las respuestas de la API
 interface AuthResponse {
@@ -429,7 +429,7 @@ export const sancionesApi = {
 
       const response = await apiRequest<import('../types/database').SancionesResponse>(`/sanciones/usuario/${userId}`, {
         method: 'GET'
-      }, 'http://127.0.0.1:8006/api')
+      }, 'http://penalty.proyectoinsti.site/api')
       
       console.log('✅ Sanciones obtenidas:', response?.data?.length || 0, 'sanciones')
       return Array.isArray(response?.data) ? response.data : []
